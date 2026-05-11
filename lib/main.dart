@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/library_models.dart';
 import 'theme/app_theme.dart';
 
@@ -23,13 +24,14 @@ class DatabaseService {
   }
 
   static Future<void> open(String name) async {
-    user = name;
-    await Hive.openBox('cat_$name');
-    await Hive.openBox('pub_$name');
-    await Hive.openBox('loc_$name');
-    await Hive.openBox('books_$name');
-    await Hive.openBox('auth_$name');
-    await Hive.openBox('mem_$name');
+    user = name.trim().toLowerCase();
+    await Hive.openBox('cat_$user');
+    await Hive.openBox('pub_$user');
+    await Hive.openBox('loc_$user');
+    await Hive.openBox('books_$user');
+    await Hive.openBox('auth_$user');
+    await Hive.openBox('mem_$user');
+    await Hive.openBox('iss_$user');
 
     if (box('cat').isEmpty) {
       box('cat').add(Category(categoryId: 1, categoryName: 'Computer Science'));
@@ -89,15 +91,38 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  bool login = false;
+  bool? login;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLogin();
+  }
+
+  void _checkLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUser = prefs.getString('current_user');
+    if (savedUser != null) {
+      await DatabaseService.open(savedUser);
+      setState(() => login = true);
+    } else {
+      setState(() => login = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (login) {
+    if (login == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    
+    if (login!) {
       return const MainShell();
     } else {
       return LoginScreen(
         onLogin: (u) async {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('current_user', u.username);
           await DatabaseService.open(u.username);
           setState(() => login = true);
         },
@@ -107,66 +132,90 @@ class _AuthWrapperState extends State<AuthWrapper> {
 }
 
 // --- LOGIN SCREEN ---
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   final Function(AppUser) onLogin;
+  const LoginScreen({super.key, required this.onLogin});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
   final uC = TextEditingController();
   final pC = TextEditingController();
-
-  LoginScreen({super.key, required this.onLogin});
+  String? error;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Card(
-          margin: const EdgeInsets.all(32),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.library_books,
-                  size: 64,
-                  color: AppTheme.primaryColor,
-                ),
-                const Text(
-                  'LibMaster',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: uC,
-                  decoration: const InputDecoration(
-                    labelText: 'Username',
-                    prefixIcon: Icon(Icons.person),
+        child: SingleChildScrollView(
+          child: Card(
+            margin: const EdgeInsets.all(32),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.library_books,
+                    size: 64,
+                    color: AppTheme.primaryColor,
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: pC,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock),
+                  const Text(
+                    'LibMaster',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    final b = Hive.box<AppUser>('users');
-                    final u = b.values.cast<AppUser?>().firstWhere(
-                          (x) => x?.username == uC.text,
-                          orElse: () => null,
-                        );
-                    if (u != null && u.password != pC.text) return;
-                    final finalU = u ?? AppUser(username: uC.text, password: pC.text);
-                    if (u == null) b.add(finalU);
-                    onLogin(finalU);
-                  },
-                  child: const Text('Login / Sign Up'),
-                ),
-              ],
+                  const SizedBox(height: 24),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(error!, style: const TextStyle(color: Colors.red)),
+                    ),
+                  TextField(
+                    controller: uC,
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: pC,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      final username = uC.text.trim().toLowerCase();
+                      if (username.isEmpty || pC.text.isEmpty) {
+                        setState(() => error = "Please fill all fields");
+                        return;
+                      }
+
+                      final b = Hive.box<AppUser>('users');
+                      final u = b.values.cast<AppUser?>().firstWhere(
+                            (x) => x?.username.toLowerCase() == username,
+                            orElse: () => null,
+                          );
+                      
+                      if (u != null && u.password != pC.text) {
+                        setState(() => error = "Invalid password");
+                        return;
+                      }
+                      
+                      final finalU = u ?? AppUser(username: username, password: pC.text);
+                      if (u == null) b.add(finalU);
+                      widget.onLogin(finalU);
+                    },
+                    child: const Text('Login / Sign Up'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -223,9 +272,15 @@ class _MainShellState extends State<MainShell> {
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
                   title: const Text('Logout'),
-                  onTap: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (c) => const AuthWrapper()),
-                  ),
+                  onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.remove('current_user');
+                    if (mounted) {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (c) => const AuthWrapper()),
+                      );
+                    }
+                  },
                 ),
               ],
             );
