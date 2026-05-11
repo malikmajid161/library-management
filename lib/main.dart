@@ -35,7 +35,7 @@ class DatabaseService {
       box('cat').add(Category(categoryId: 1, categoryName: 'Computer Science'));
     }
     if (box('auth').isEmpty) {
-      box('auth').add(Author(authorId: 1, firstName: 'John', lastName: 'Doe'));
+      box('auth').add(Author(authorId: 1, firstName: 'Majid', lastName: 'ALi'));
     }
     if (box('pub').isEmpty) {
       box('pub').add(Publisher(publisherId: 1, publisherName: 'Tech Press', publicationLanguage: 'English', publicationType: 'Academic'));

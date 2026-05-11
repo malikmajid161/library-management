@@ -4,7 +4,7 @@
 
 ### 🔗 Live Demo
 Experience the app live at:  
-**[www.libraryMaster.com](https://www.libraryMaster.com)**
+**[https://malikmajid161.github.io/library-management/](https://malikmajid161.github.io/library-management/)**
 
 ---
 
