@@ -26,9 +26,11 @@ jobs:
       - name: Build Web
         run: flutter build web --base-href "/"
 
+      - name: Create CNAME
+        run: echo "www.libraryMaster.com" > build/web/CNAME
+
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build/web
           branch: gh-pages
-          cname: www.libraryMaster.com
