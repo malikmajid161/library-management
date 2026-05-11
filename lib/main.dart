@@ -243,6 +243,7 @@ class _MainShellState extends State<MainShell> {
         title: Text(['Dashboard', 'Books', 'Members'][idx]),
       ),
       drawer: Drawer(
+        width: MediaQuery.of(context).size.width,
         child: ValueListenableBuilder(
           valueListenable: Hive.box<AppUser>('users').listenable(),
           builder: (c, Box<AppUser> b, _) {
