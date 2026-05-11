@@ -8081,7 +8081,7 @@ n=o.a(q.d3("auth_"+A.l($.dd),!1,p))
 if(!n.f)A.L(A.bG("Box has already been closed."))
 n=n.e
 n===$&&A.a()
-if(n.c.e===0)o.a(q.d3("auth_"+A.l($.dd),!1,p)).E(0,new A.hX(1,"John","Doe",null,null,A.o(t.v,t.S)))
+if(n.c.e===0)o.a(q.d3("auth_"+A.l($.dd),!1,p)).E(0,new A.hX(1,"Majid","ALi",null,null,A.o(t.v,t.S)))
 n=o.a(q.d3("pub_"+A.l($.dd),!1,p))
 if(!n.f)A.L(A.bG("Box has already been closed."))
 n=n.e
